@@ -66,10 +66,10 @@ module syncgen(
             DSP_preDE <= 1'b0;
         end
         else begin
-            if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-1)) begin
+            if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-2)) begin
                 DSP_preDE <= 1'b0;
             end
-            else if((VCNT>=VFP+VPW+VBP)&(VCNT<=VFP+VPW+VBP+VDO)&(HCNT==HFP+HPW+HBP-1)) begin
+            else if((VCNT>=VFP+VPW+VBP)&(VCNT<=VFP+VPW+VBP+VDO)&(HCNT==HFP+HPW+HBP-2)) begin
                 DSP_preDE <= 1'b1;
             end
         end
