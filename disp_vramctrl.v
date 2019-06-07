@@ -64,8 +64,9 @@ always @* begin
         S_IDLE: if(VRSTART) begin
                     state_generator <= S_SETADDR;
                 end
-        S_SETADDR:
-
+        S_SETADDR: if(ARREADY) begin
+                    state_generator <= S_READ;
+                   end
         S_READ: if(RLAST&RREADY) begin
                     if(counter==watch_dogs) //一画面分終了したらS_IDLEに戻る, カウンタが必要
                         state_generator <= S_IDLE;
@@ -90,8 +91,11 @@ always @* begin
     if(ACLK) begin
         counter <= 0;
     end
-    else if(state_reg==S_SETADDR/*S_SETADDR->S_READになる条件と同じものを書く*/) begin
+    else if(state_reg==S_SETADDR&ARREADY) begin
         counter <= counter + 1;
+    end
+    else if(counter==watch_dogs&RLAST&RREADY) begin
+        counter <= 0;
     end
 end//counter
 
