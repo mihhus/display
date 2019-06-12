@@ -37,7 +37,76 @@ module disp_vramctrl
 );
 
 //AXIで各種信号をやり取りする Masterとして
-
 //FIFOへ書き込み
 
+    reg [3:0] state_reg;
+    reg [3:0] state_generator;
+
+//ステート名定義
+parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
+
+//VGAの時の画素数/8(１トランザクションで送れる画素数)
+parameter watch_dogs = 16'h9600; //16'd38400
+
+//ステートレジスタ
+always @(posedge ACLK) begin
+    if(ARST) begin
+        state_reg <= S_IDLE;
+    end
+    else
+        state_reg <= state_generator;
+    begin
+end //state_reg
+
+//state_generator
+always @* begin
+    case(state_reg)
+        S_IDLE: if(VRSTART) begin
+                    state_generator <= S_SETADDR;
+                end
+        S_SETADDR: if(ARREADY) begin
+                    state_generator <= S_READ;
+                   end
+        S_READ: if(RLAST&RREADY) begin
+                    if(counter==watch_dogs) //一画面分終了したらS_IDLEに戻る, カウンタが必要
+                        state_generator <= S_IDLE;
+                    end
+                    else if(BUF_WREADY) begin
+                        state_generator <= S_SETADDR;
+                    end
+                    else begin
+                        state_generator <= S_WAIT;
+                    end
+                end
+        S_WAIT: if(BUF_WREADY) begin
+                    state_generator <= S_SETADDR;
+                end
+        default:
+            state_generator <= S_IDLE;
+    endcase
+end //state_generator;
+
+//counter
+always @* begin
+    if(ACLK) begin
+        counter <= 0;
+    end
+    else if(state_reg==S_SETADDR&ARREADY) begin
+        counter <= counter + 1;
+    end
+    else if(counter==watch_dogs&RLAST&RREADY) begin
+        counter <= 0;
+    end
+end//counter
+
+
+//ARADDR
+always @(posedge ACLK) begin
+    if(ARST==1) begin
+        ARADDR <= 0;
+    end
+    else begin
+
+    end
+end //ARADDR
 endmodule
