@@ -45,7 +45,7 @@ module disp_vramctrl
 //ステート名定義
 parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
 
-//VGAの時の画素数/8(１トランザクションで送れる画素数)
+//VGAの時の画素数/8(１トランザクションで送れる画素数)=必要なトランザクション数
 parameter watch_dogs = 16'h9600; //16'd38400
 
 //ステートレジスタ
@@ -71,10 +71,10 @@ always @* begin
                     if(counter==watch_dogs) //一画面分終了したらS_IDLEに戻る, カウンタが必要
                         state_generator <= S_IDLE;
                     end
-                    else if(BUF_WREADY) begin
+                    else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
                         state_generator <= S_SETADDR;
                     end
-                    else begin
+                    else begin  //一画面分終了しておらず，バッファに余裕がなければS_WAITに移動
                         state_generator <= S_WAIT;
                     end
                 end
@@ -106,7 +106,28 @@ always @(posedge ACLK) begin
         ARADDR <= 0;
     end
     else begin
+        if(state_reg==S_SETADDR) begin
+            ARADDR <= counter*4'h20 + DISPADDR;    //1トランザクションがd32bitなのでh20ずつ移動させる
 
+        end
+        else begin
+            ARADDR <= 0;
+        end
     end
 end //ARADDR
+
+//ARVALID
+always @(posedge ACLK) begin
+    if(ARST==1) begin
+        ARVALID <= 0;
+    end
+    else begin
+        if(state_reg==S_SETADDR) begin
+            ARADDR <= 1;
+        end
+        else begin
+            ARADDR <= 0;
+        end
+    end
+end //ARVALID
 endmodule
