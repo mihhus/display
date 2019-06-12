@@ -42,6 +42,8 @@ module disp_vramctrl
     reg [3:0] state_reg;
     reg [3:0] state_generator;
 
+    reg [15:0] counter;
+
 //ステート名定義
 parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
 
@@ -53,9 +55,9 @@ always @(posedge ACLK) begin
     if(ARST) begin
         state_reg <= S_IDLE;
     end
-    else
+    else begin
         state_reg <= state_generator;
-    begin
+    end
 end //state_reg
 
 //state_generator
@@ -68,7 +70,7 @@ always @* begin
                     state_generator <= S_READ;
                    end
         S_READ: if(RLAST&RREADY) begin
-                    if(counter==watch_dogs) //一画面分終了したらS_IDLEに戻る, カウンタが必要
+                    if(counter==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
                         state_generator <= S_IDLE;
                     end
                     else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
@@ -103,7 +105,7 @@ end//counter
 //ARADDR
 always @(posedge ACLK) begin
     if(ARST==1) begin
-        ARADDR <= 0;
+        ARADDR <= 10;
     end
     else begin
         if(state_reg==S_SETADDR) begin
@@ -123,10 +125,10 @@ always @(posedge ACLK) begin
     end
     else begin
         if(state_reg==S_SETADDR) begin
-            ARADDR <= 1;
+            ARVALID <= 1;
         end
         else begin
-            ARADDR <= 0;
+            ARVALID <= 0;
         end
     end
 end //ARVALID

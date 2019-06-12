@@ -77,7 +77,9 @@ always @(posedge DCLK) begin
         DSP_R <= 0;
     end
     else begin
-        DSP_R <= dout[23:16];
+        if(DISPON) begin
+            DSP_R <= dout[23:16];
+        end
     end
 end //DSP_R
 
@@ -87,7 +89,9 @@ always @(posedge DCLK) begin
         DSP_G <= 0;
     end
     else begin
-        DSP_G <= dout[15:8];
+        if(DISPON) begin
+            DSP_G <= dout[15:8];
+        end
     end
 end //DSP_G
 
@@ -97,7 +101,9 @@ always @(posedge DCLK) begin
         DSP_B <= 0;
     end
     else begin
-        DSP_B <= dout[7:0];
+        if(DISPON) begin
+            DSP_B <= dout[7:0];
+        end
     end
 end //DSP_B
 
