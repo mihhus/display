@@ -12,48 +12,52 @@
 //-----------------------------------------------------------------------------
 
 module disp_buffer
-  (
-    // System Signals
-    input               ACLK,
-    input               ARST,
+(
+// System Signals
+input               ACLK,
+input               ARST,
 
-    /* 表示クロック、リセット */
-    input               DCLK,
-    input               DRST,
+/* 表示クロック、リセット */
+input               DCLK,
+input               DRST,
 
-    /* FIFO関連信号 */
-    input               DISPON,
-    input               FIFORST,
-    input   [63:0]      FIFOIN,
-    input               FIFOWR,
-    input               DSP_preDE,
-    output              BUF_WREADY,
-    output              BUF_OVER,
-    output              BUF_UNDER,
+/* FIFO関連信号 */
+input               DISPON,
+input               FIFORST,
+input   [63:0]      FIFOIN,
+input               FIFOWR,
+input               DSP_preDE,
+output              BUF_WREADY,
+output              BUF_OVER,
+output              BUF_UNDER,
 
-    /* 画像出力 */
-    output  reg [7:0]   DSP_R, DSP_G, DSP_B,
-    output  reg         DSP_DE
-    ); 
+/* 画像出力 */
+output  reg [7:0]   DSP_R, DSP_G, DSP_B,
+output  reg         DSP_DE
+); 
 
-    //画像入力はαRGBの8bit*4種類*2画素=64が送られてくるのでαを除いて48bitを形成する
-    //画像出力は24bitをそれぞれRGBに切り分けてそうしんする
-    
-    //FIFO関連信号
-    wire    [10:0] counter;
-    wire    rst = ARST | DRST | FIFORST;
-    wire    [23:0] dout;
-    wire    [47:0] din = {FIFOIN[55:32] + FIFOIN[23:0]};
+//画像入力はαRGBの8bit*4種類*2画素=64が送られてくるのでαを除いて48bitを形成する
+//画像出力は24bitをそれぞれRGBに切り分けてそうしんする
 
-    //wr_data_counterが書き込まれた数なら1024-counterでFIFO残りサイズがわかるはず
-    assign  BUF_WREADY = (10'h400-counter >= 256) ? 1 : 0;
+//FIFO関連信号
+wire    [10:0] counter;
+wire    rst = ARST | DRST | FIFORST;
+wire    [23:0] dout;
+wire    [47:0] din = {FIFOIN[55:32] + FIFOIN[23:0]};
 
-    //FIFOに接続するが使用しない
-    wire    full;
-    wire    over;
-    wire    empty;
+//wr_data_counterが書き込まれた数なら1024-counterでFIFO残りサイズがわかるはず
+assign  BUF_WREADY = (10'h400-counter >= 256) ? 1 : 0;
 
+//FIFOに接続するが使用しない
+wire    full;
+wire    over;
+wire    empty;
+wire    vaild;
 
+//DSP_DE
+always @* begin
+    DSP_DE <= DSP_preDE;
+end //DSP_DE
 /* FIFO */
 fifo_48in24out_1024depth fifo_48in24out_1024depth(
     .rst          (rst),
@@ -66,7 +70,7 @@ fifo_48in24out_1024depth fifo_48in24out_1024depth(
     .full         (full),
     .overflow     (BUF_OVER),
     .empty        (empty),
-    .valid        (DSP_DE),
+    .valid        (valid),
     .underflow    (BUF_UNDER),
     .wr_data_count(counter) //書き込まれた数？なら1024 - counterでFIFOの残りサイズがわかるはず
 );
