@@ -19,13 +19,13 @@ module syncgen(
     input               VRSTART,        //表示開始
     output  reg         DSP_HSYNC_X ,    //水平同期信号
     output  reg         DSP_VSYNC_X,    //垂直同期信号
-    output  reg         DSP_preDE,      //DSP_DEの１つ前の信号(1で画像データが有効)
+    output  reg         DSP_preDE      //DSP_DEの１つ前の信号(1で画像データが有効)
 );
 
 `include "syncgen_param.vh"
 //内部信号
-reg [10:0]  HCNT,           //水平カウンタ
-reg [10:0]  VCNT            //垂直カウンタ
+reg [10:0]  HCNT;           //水平カウンタ
+reg [10:0]  VCNT;            //垂直カウンタ
 
 //ステートマシン
 parameter S_IDLE=2'b01, S_DISP=2'b10;
@@ -34,7 +34,7 @@ reg     [1:0] CUR;  //ステートマシン
 reg     [1:0] NXT;  //ステート生成
 
 //CUR
-always @(posedge CLK) begin
+always @(posedge DCLK) begin
     if(DRST) begin
         CUR <= S_IDLE;
     end
@@ -52,7 +52,7 @@ always @* begin
         S_DISP: if (VCNT==VSC-1) begin
                     NXT <= S_DISP;
                 end
-        default:
+        default: NXT <= S_IDLE;
     endcase
 end //NXT
 
