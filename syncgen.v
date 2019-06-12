@@ -61,7 +61,7 @@ always@(posedge DCLK) begin
     if(DRST==1'b1) begin
         DSP_HSYNC_X <= 11'h1;
     end
-    else begin
+    else if(CUR==S_DISP) begin
         if(HCNT == HFP-1) begin
             DSP_HSYNC_X <= 11'h0;
         end
@@ -76,7 +76,7 @@ always@(posedge DCLK) begin
     if(DRST==1'b1) begin
         DSP_VSYNC_X <= 11'h1;
     end
-    else begin
+    else if(CUR==S_DISP)begin
         if(VCNT == VFP & HCNT == HFP-1) begin
         //—§‰º‚è‚ðHSYNC‚Æ‡‚í‚¹‚é
             DSP_VSYNC_X <= 1'b0;
@@ -93,7 +93,7 @@ always@(posedge DCLK) begin
     if(DRST==1'b1) begin
         DSP_preDE <= 1'b0;
     end
-    else begin
+    else if(CUR==S_DISP)begin
         if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-2)) begin
             DSP_preDE <= 1'b0;
         end
@@ -108,7 +108,7 @@ always@(posedge DCLK) begin
     if(DRST==1'b1) begin
         HCNT <= 1'b0;
     end
-    else begin
+    else if(CUR==S_DISP)begin
         if(HCNT == HSC-1) begin
             HCNT <= 1'b0;
         end
@@ -124,7 +124,7 @@ always@(posedge DCLK) begin
     if(DRST==1'b1) begin
         VCNT <= 1'b0;
     end
-    else begin
+    else if(CUR==S_DISP)begin
         if(HCNT == HSC-1'b1) begin
             if(VCNT == VSC-1'b1) begin
                 VCNT <= 1'b0;
