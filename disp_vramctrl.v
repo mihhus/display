@@ -39,8 +39,8 @@ module disp_vramctrl
 //AXIで各種信号をやり取りする Masterとして
 //FIFOへ書き込み
 
-    reg [3:0] state_reg;
-    reg [3:0] state_generator;
+    reg [3:0] CUR;
+    reg [3:0] NXT;
 
     reg [15:0] counter;
 
@@ -52,55 +52,70 @@ parameter watch_dogs = 16'h9600; //16'd38400
 
 //ARチャネルの送信側
 //ARADDR
-assign ARADDR = (!ARST&state_reg==S_SETADDR) ? counter*4'h20+DISPADDR : 0;
+assign ARADDR = (!ARST&CUR==S_SETADDR) ? counter*4'h20+DISPADDR : 0;
 
 //ARVALID
-assign ARVALID = (!ARST&state_generator==S_SETADDR) ? 1 : 0;
+assign ARVALID = (!ARST&NXT==S_SETADDR) ? 1 : 0;
 
 //ステートレジスタ
 always @(posedge ACLK) begin
     if(ARST) begin
-        state_reg <= S_IDLE;
+        CUR <= S_IDLE;
     end
     else begin
-        state_reg <= state_generator;
+        CUR <= NXT;
     end
-end //state_reg
+end //CUR
 
-//state_generator
+//NXT
 always @* begin
-    case(state_reg)
+    case(CUR)
         S_IDLE: if(VRSTART) begin
-                    state_generator <= S_SETADDR;
+                    NXT <= S_SETADDR;
                 end
         S_SETADDR: if(ARREADY) begin
-                    state_generator <= S_READ;
+                    NXT <= S_READ;
                    end
         S_READ: if(RLAST&RREADY) begin
                     if(counter==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
-                        state_generator <= S_IDLE;
+                        NXT <= S_IDLE;
                     end
                     else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
-                        state_generator <= S_SETADDR;
+                        NXT <= S_SETADDR;
                     end
                     else begin  //一画面分終了しておらず，バッファに余裕がなければS_WAITに移動
-                        state_generator <= S_WAIT;
+                        NXT <= S_WAIT;
                     end
                 end
         S_WAIT: if(BUF_WREADY) begin
-                    state_generator <= S_SETADDR;
+                    NXT <= S_SETADDR;
                 end
         default:
-            state_generator <= S_IDLE;
+            NXT <= S_IDLE;
     endcase
-end //state_generator;
+end //NXT;
+
+//RREADY
+always @(posedge ACLK) begin
+    if(ARST) begin
+        RREADY <= 0;
+    end
+    else begin
+        if(CUR==S_READ) begin
+            RREADY <= 1;
+        end
+        else begin
+            RREADY <= 0;
+        end
+    end
+end //RREADY
 
 //counter
-always @* begin
-    if(ACLK) begin
+always @(posedge ACLK) begin
+    if(ARST) begin
         counter <= 0;
     end
-    else if(state_reg==S_SETADDR&ARREADY) begin
+    else if(CUR==S_SETADDR&ARREADY) begin
         counter <= counter + 1;
     end
     else if(counter==watch_dogs&RLAST&RREADY) begin
