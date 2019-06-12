@@ -23,91 +23,118 @@ module syncgen(
 );
 
 `include "syncgen_param.vh"
-    //内部信号
-    reg [10:0]  HCNT,           //水平カウンタ
-    reg [10:0]  VCNT            //垂直カウンタ
+//内部信号
+reg [10:0]  HCNT,           //水平カウンタ
+reg [10:0]  VCNT            //垂直カウンタ
 
-    //同期動作
+//ステートマシン
+parameter S_IDLE=2'b01, S_DISP=2'b10;
 
-    //DSP_HSYNC_X
-    always@(posedge DCLK) begin
-        if(DRST==1'b1) begin
+reg     [1:0] CUR;  //ステートマシン
+reg     [1:0] NXT;  //ステート生成
+
+//CUR
+always @(posedge CLK) begin
+    if(DRST) begin
+        CUR <= S_IDLE;
+    end
+    else begin
+        CUR <= NXT;
+    end
+end //CUR
+
+//NXT
+always @* begin
+    case(CUR)
+        S_IDLE: if(VRSTART) begin
+                    NXT <= S_DISP;
+                end
+        S_DISP: if (VCNT==VSC-1) begin
+                    NXT <= S_DISP;
+                end
+        default:
+    endcase
+end //NXT
+
+//DSP_HSYNC_X
+always@(posedge DCLK) begin
+    if(DRST==1'b1) begin
+        DSP_HSYNC_X <= 11'h1;
+    end
+    else begin
+        if(HCNT == HFP-1) begin
+            DSP_HSYNC_X <= 11'h0;
+        end
+        else if(HCNT == HFP+HPW-1) begin
             DSP_HSYNC_X <= 11'h1;
         end
-        else begin
-            if(HCNT == HFP-1) begin
-                DSP_HSYNC_X <= 11'h0;
-            end
-            else if(HCNT == HFP+HPW-1) begin
-                DSP_HSYNC_X <= 11'h1;
-            end
-        end
-    end //DSP_HSYNC_X
+    end
+end //DSP_HSYNC_X
 
-    //DSP_VSYNC_X
-    always@(posedge DCLK) begin
-        if(DRST==1'b1) begin
-            DSP_VSYNC_X <= 11'h1;
+//DSP_VSYNC_X
+always@(posedge DCLK) begin
+    if(DRST==1'b1) begin
+        DSP_VSYNC_X <= 11'h1;
+    end
+    else begin
+        if(VCNT == VFP & HCNT == HFP-1) begin
+        //立下りをHSYNCと合わせる
+            DSP_VSYNC_X <= 1'b0;
         end
-        else begin
-            if(VCNT == VFP & HCNT == HFP-1) begin
-            //立下りをHSYNCと合わせる
-                DSP_VSYNC_X <= 1'b0;
-            end
-            else if(VCNT == VFP+VPW & HCNT == HFP-1) begin
-            //立ち上がりをHSYNCと合わせる
-                DSP_VSYNC_X <= 1'b1;
-            end
+        else if(VCNT == VFP+VPW & HCNT == HFP-1) begin
+        //立ち上がりをHSYNCと合わせる
+            DSP_VSYNC_X <= 1'b1;
         end
-    end //DSP_VSYNC_X
+    end
+end //DSP_VSYNC_X
 
-    //DSP_preDE
-    always@(posedge DCLK) begin
-        if(DRST==1'b1) begin
+//DSP_preDE
+always@(posedge DCLK) begin
+    if(DRST==1'b1) begin
+        DSP_preDE <= 1'b0;
+    end
+    else begin
+        if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-2)) begin
             DSP_preDE <= 1'b0;
         end
-        else begin
-            if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-2)) begin
-                DSP_preDE <= 1'b0;
-            end
-            else if((VCNT>=VFP+VPW+VBP)&(VCNT<=VFP+VPW+VBP+VDO)&(HCNT==HFP+HPW+HBP-2)) begin
-                DSP_preDE <= 1'b1;
-            end
+        else if((VCNT>=VFP+VPW+VBP)&(VCNT<=VFP+VPW+VBP+VDO)&(HCNT==HFP+HPW+HBP-2)) begin
+            DSP_preDE <= 1'b1;
         end
-    end //DSP_preDE
+    end
+end //DSP_preDE
 
-    //HCNT
-    always@(posedge DCLK) begin
-        if(DRST==1'b1) begin
+//HCNT
+always@(posedge DCLK) begin
+    if(DRST==1'b1) begin
+        HCNT <= 1'b0;
+    end
+    else begin
+        if(HCNT == HSC-1) begin
             HCNT <= 1'b0;
         end
         else begin
-            if(HCNT == HSC-1) begin
-                HCNT <= 1'b0;
+            HCNT <= HCNT + 1'b1;
+        end
+    end
+
+end //HCNT
+
+//VCNT
+always@(posedge DCLK) begin
+    if(DRST==1'b1) begin
+        VCNT <= 1'b0;
+    end
+    else begin
+        if(HCNT == HSC-1'b1) begin
+            if(VCNT == VSC-1'b1) begin
+                VCNT <= 1'b0;
             end
             else begin
-                HCNT <= HCNT + 1'b1;
+                VCNT <= VCNT + 1;
             end
         end
-
-    end //HCNT
-
-    //VCNT
-    always@(posedge DCLK) begin
-        if(DRST==1'b1) begin
-            VCNT <= 1'b0;
-        end
-        else begin
-            if(HCNT == HSC-1'b1) begin
-                if(VCNT == VSC-1'b1) begin
-                    VCNT <= 1'b0;
-                end
-                else begin
-                    VCNT <= VCNT + 1;
-                end
-            end
-        end
-    end //VCNT
+    end
+end //VCNT
 
 
 endmodule //syncgen
