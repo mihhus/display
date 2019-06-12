@@ -50,6 +50,13 @@ parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1
 //VGAの時の画素数/8(１トランザクションで送れる画素数)=必要なトランザクション数
 parameter watch_dogs = 16'h9600; //16'd38400
 
+//ARチャネルの送信側
+//ARADDR
+assign ARADDR = (!ARST&state_reg==S_SETADDR) ? counter*4'h20+DISPADDR : 0;
+
+//ARVALID
+assign ARVALID = (!ARST&state_generator==S_SETADDR) ? 1 : 0;
+
 //ステートレジスタ
 always @(posedge ACLK) begin
     if(ARST) begin
@@ -100,36 +107,4 @@ always @* begin
         counter <= 0;
     end
 end//counter
-
-
-//ARADDR
-always @(posedge ACLK) begin
-    if(ARST==1) begin
-        ARADDR <= 10;
-    end
-    else begin
-        if(state_reg==S_SETADDR) begin
-            ARADDR <= counter*4'h20 + DISPADDR;    //1トランザクションがd32bitなのでh20ずつ移動させる
-
-        end
-        else begin
-            ARADDR <= 0;
-        end
-    end
-end //ARADDR
-
-//ARVALID
-always @(posedge ACLK) begin
-    if(ARST==1) begin
-        ARVALID <= 0;
-    end
-    else begin
-        if(state_reg==S_SETADDR) begin
-            ARVALID <= 1;
-        end
-        else begin
-            ARVALID <= 0;
-        end
-    end
-end //ARVALID
 endmodule
