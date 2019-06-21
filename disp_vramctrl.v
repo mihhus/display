@@ -42,7 +42,7 @@ module disp_vramctrl
     reg [3:0] CUR;
     reg [3:0] NXT;
 
-    reg [15:0] counter;
+    reg [15:0] COUNT;
 
 //ステート名定義
 parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
@@ -52,7 +52,7 @@ parameter watch_dogs = 16'h9600; //16'd38400
 
 //ARチャネルの送信側
 //ARADDR
-assign ARADDR = (!ARST&CUR==S_SETADDR) ? counter*4'h20+DISPADDR : 0;
+assign ARADDR = (!ARST&CUR==S_SETADDR) ? COUNT*4'h20+DISPADDR : 0;
 
 //ARVALID
 assign ARVALID = (!ARST&NXT==S_SETADDR) ? 1 : 0;
@@ -70,24 +70,24 @@ end //CUR
 //NXT
 always @* begin
     case(CUR)
-        S_IDLE: if(VRSTART) begin
+        S_IDLE: if(VRSTART) begin   //待機
                     NXT <= S_SETADDR;
                 end
-        S_SETADDR: if(ARREADY) begin
+        S_SETADDR: if(ARREADY) begin    //ARチャネルにアドレスを発行
                     NXT <= S_READ;
                    end
-        S_READ: if(RLAST&RREADY) begin
-                    if(counter==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
+        S_READ: if(RLAST&RREADY) begin  //VRAMを読み出し、FIFOにつく
+                    if(COUNT==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
                         NXT <= S_IDLE;
                     end
-                    else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
+                    else if(!BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
                         NXT <= S_SETADDR;
                     end
                     else begin  //一画面分終了しておらず，バッファに余裕がなければS_WAITに移動
                         NXT <= S_WAIT;
                     end
                 end
-        S_WAIT: if(BUF_WREADY) begin
+        S_WAIT: if(!BUF_WREADY) begin
                     NXT <= S_SETADDR;
                 end
         default:
@@ -98,16 +98,16 @@ end //NXT;
 //RREADY
 assign RREADY = (CUR==S_READ&!ARST) ? 1 : 0;
 
-//counter
+//COUNT
 always @(posedge ACLK) begin
     if(ARST) begin
-        counter <= 0;
+        COUNT <= 0;
     end
     else if(CUR==S_SETADDR&ARREADY) begin
-        counter <= counter + 1;
+        COUNT <= COUNT + 1;
     end
-    else if(counter==watch_dogs&RLAST&RREADY) begin
-        counter <= 0;
+    else if(COUNT==watch_dogs&RLAST&RREADY) begin
+        COUNT <= 0;
     end
-end//counter
+end//COUNT
 endmodule

@@ -34,25 +34,24 @@ output              BUF_UNDER,
 /* 画像出力 */
 output  reg [7:0]   DSP_R, DSP_G, DSP_B,
 output  reg         DSP_DE
-
+);
 
 //画像入力はαRGBの8bit*4種類*2画素=64が送られてくるのでαを除いて48bitを形成する
 //画像出力は24bitをそれぞれRGBに切り分けてそうしんする
 
 //FIFO関連信号
-wire    [10:0] counter;
-wire    rst = ARST | DRST | FIFORST;
+wire    [9:0] counter;
+wire    RST = ARST | DRST | FIFORST;
 wire    [23:0] dout;
 wire    [47:0] din = {FIFOIN[55:32] + FIFOIN[23:0]};
 
 //wr_data_counterが書き込まれた数なら1024-counterでFIFO残りサイズがわかるはず
-assign  BUF_WREADY = (10'h400-counter >= 256) ? 1 : 0;
+assign  BUF_WREADY = (11'h400-counter >= 11'd256) ? 1 : 0;
 
 //FIFOに接続するが使用しない
 wire    full;
-wire    over;
 wire    empty;
-wire    vaild;
+wire    valid;
 
 //DSP_DE
 always @* begin
@@ -60,7 +59,7 @@ always @* begin
 end //DSP_DE
 /* FIFO */
 fifo_48in24out_1024depth fifo_48in24out_1024depth(
-    .rst          (rst),
+    .rst          (RST),
     .wr_clk       (ACLK),
     .rd_clk       (DCLK),
     .din          (din),
