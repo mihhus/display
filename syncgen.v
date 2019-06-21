@@ -16,15 +16,16 @@ module syncgen(
     input               DCLK,           //ドットクロック
     input               DRST,           //リセット
     input       [1:0]   RESOL,          //解像度設定信号
+    input               VRSTART,        //表示開始
     output  reg         DSP_HSYNC_X ,    //水平同期信号
     output  reg         DSP_VSYNC_X,    //垂直同期信号
     output  reg         DSP_preDE,      //DSP_DEの１つ前の信号(1で画像データが有効)
-    output  reg [10:0]  HCNT,           //水平カウンタ
-    output  reg [10:0]  VCNT            //垂直カウンタ
 );
 
 `include "syncgen_param.vh"
     //内部信号
+    reg [10:0]  HCNT,           //水平カウンタ
+    reg [10:0]  VCNT            //垂直カウンタ
 
     //同期動作
 

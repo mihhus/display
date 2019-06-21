@@ -42,20 +42,29 @@ module disp_vramctrl
     reg [3:0] state_reg;
     reg [3:0] state_generator;
 
+    reg [15:0] counter;
+
 //ステート名定義
 parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
 
-//VGAの時の画素数/8(１トランザクションで送れる画素数)
+//VGAの時の画素数/8(１トランザクションで送れる画素数)=必要なトランザクション数
 parameter watch_dogs = 16'h9600; //16'd38400
+
+//ARチャネルの送信側
+//ARADDR
+assign ARADDR = (!ARST&state_reg==S_SETADDR) ? counter*4'h20+DISPADDR : 0;
+
+//ARVALID
+assign ARVALID = (!ARST&state_generator==S_SETADDR) ? 1 : 0;
 
 //ステートレジスタ
 always @(posedge ACLK) begin
     if(ARST) begin
         state_reg <= S_IDLE;
     end
-    else
+    else begin
         state_reg <= state_generator;
-    begin
+    end
 end //state_reg
 
 //state_generator
@@ -68,13 +77,13 @@ always @* begin
                     state_generator <= S_READ;
                    end
         S_READ: if(RLAST&RREADY) begin
-                    if(counter==watch_dogs) //一画面分終了したらS_IDLEに戻る, カウンタが必要
+                    if(counter==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
                         state_generator <= S_IDLE;
                     end
-                    else if(BUF_WREADY) begin
+                    else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
                         state_generator <= S_SETADDR;
                     end
-                    else begin
+                    else begin  //一画面分終了しておらず，バッファに余裕がなければS_WAITに移動
                         state_generator <= S_WAIT;
                     end
                 end
@@ -98,15 +107,4 @@ always @* begin
         counter <= 0;
     end
 end//counter
-
-
-//ARADDR
-always @(posedge ACLK) begin
-    if(ARST==1) begin
-        ARADDR <= 0;
-    end
-    else begin
-
-    end
-end //ARADDR
 endmodule
