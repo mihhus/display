@@ -109,8 +109,8 @@ module display #
 // Write Address (AW)
 assign M_AXI_AWID    = 1'b0;   
 assign M_AXI_AWADDR  = 0;
-assign M_AXI_AWLEN   = 0;
-assign M_AXI_AWSIZE  = 0;
+assign M_AXI_AWLEN   = 8'h1F;
+assign M_AXI_AWSIZE  = 3'b011;
 assign M_AXI_AWBURST = 2'b01;
 assign M_AXI_AWLOCK  = 2'b00;
 assign M_AXI_AWCACHE = 4'b0011;

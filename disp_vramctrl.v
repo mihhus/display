@@ -96,19 +96,7 @@ always @* begin
 end //NXT;
 
 //RREADY
-always @(posedge ACLK) begin
-    if(ARST) begin
-        RREADY <= 0;
-    end
-    else begin
-        if(CUR==S_READ) begin
-            RREADY <= 1;
-        end
-        else begin
-            RREADY <= 0;
-        end
-    end
-end //RREADY
+assign RREADY = (CUR==S_READ&!ARST) ? 1 : 0;
 
 //counter
 always @(posedge ACLK) begin

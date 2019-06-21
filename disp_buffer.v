@@ -34,7 +34,7 @@ output              BUF_UNDER,
 /* ‰æ‘œo—Í */
 output  reg [7:0]   DSP_R, DSP_G, DSP_B,
 output  reg         DSP_DE
-); 
+
 
 //‰æ‘œ“ü—Í‚Íƒ¿RGB‚Ì8bit*4í—Ş*2‰æ‘f=64‚ª‘—‚ç‚ê‚Ä‚­‚é‚Ì‚Åƒ¿‚ğœ‚¢‚Ä48bit‚ğŒ`¬‚·‚é
 //‰æ‘œo—Í‚Í24bit‚ğ‚»‚ê‚¼‚êRGB‚ÉØ‚è•ª‚¯‚Ä‚»‚¤‚µ‚ñ‚·‚é
