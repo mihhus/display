@@ -46,7 +46,8 @@ wire    [23:0] dout;
 wire    [47:0] din = {FIFOIN[55:32] + FIFOIN[23:0]};
 
 //wr_data_counterが書き込まれた数なら1024-counterでFIFO残りサイズがわかるはず
-assign  BUF_WREADY = (11'h400-counter >= 11'd256) ? 1 : 0;
+//1で書き込み可能, 0で書き込み不可能
+assign  BUF_WREADY = (12'd1024-counter >= 12'd256) ? 1 : 0;
 
 //FIFOに接続するが使用しない
 wire    full;

@@ -51,11 +51,11 @@ parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1
 parameter watch_dogs = 16'h9600; //16'd38400
 
 //ARチャネルの送信側
-//ARADDR
-assign ARADDR = (!ARST&CUR==S_SETADDR) ? COUNT*4'h20+DISPADDR : 0;
+//ARADDR 8*32が1トランザクションなので
+assign ARADDR = COUNT*6'h10+DISPADDR;
 
 //ARVALID
-assign ARVALID = (!ARST&NXT==S_SETADDR) ? 1 : 0;
+assign ARVALID = (!ARST&NXT==S_SETADDR&ARREADY) ? 1 : 0;
 
 //ステートレジスタ
 always @(posedge ACLK) begin
@@ -73,22 +73,34 @@ always @* begin
         S_IDLE: if(VRSTART) begin   //待機
                     NXT <= S_SETADDR;
                 end
+                else begin
+                    NXT <= S_IDLE;
+                end
         S_SETADDR: if(ARREADY) begin    //ARチャネルにアドレスを発行
-                    NXT <= S_READ;
-                   end
+                        NXT <= S_READ;
+                    end
+                    else begin
+                        NXT <= S_SETADDR;
+                    end
         S_READ: if(RLAST&RREADY) begin  //VRAMを読み出し、FIFOにつく
                     if(COUNT==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
                         NXT <= S_IDLE;
                     end
-                    else if(!BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
+                    else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
                         NXT <= S_SETADDR;
                     end
                     else begin  //一画面分終了しておらず，バッファに余裕がなければS_WAITに移動
                         NXT <= S_WAIT;
                     end
                 end
-        S_WAIT: if(!BUF_WREADY) begin
+                else begin
+                    NXT <=S_READ;
+                end
+        S_WAIT: if(BUF_WREADY) begin
                     NXT <= S_SETADDR;
+                end
+                else begin
+                    NXT <= S_WAIT;
                 end
         default:
             NXT <= S_IDLE;
