@@ -28,7 +28,7 @@ reg [10:0]  HCNT;           //水平カウンタ
 reg [10:0]  VCNT;            //垂直カウンタ
 
 //VRSTART
- assign VRSTART = (VCNT==VFP+VPW+1) ? 1 : 0;
+ assign VRSTART = (VCNT==VFP+VPW+VBP-1) ? 1 : 0;
 
 //DSP_HSYNC_X
 always@(posedge DCLK) begin
