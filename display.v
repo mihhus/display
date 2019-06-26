@@ -107,23 +107,23 @@ module display #
     ); 
 
 // Write Address (AW)
-assign M_AXI_AWID    = 'b0;   
+assign M_AXI_AWID    = 1'b0;   
 assign M_AXI_AWADDR  = 0;
-assign M_AXI_AWLEN   = 0;
-assign M_AXI_AWSIZE  = 0;
+assign M_AXI_AWLEN   = 8'h1F;
+assign M_AXI_AWSIZE  = 3'b011;
 assign M_AXI_AWBURST = 2'b01;
 assign M_AXI_AWLOCK  = 2'b00;
 assign M_AXI_AWCACHE = 4'b0011;
 assign M_AXI_AWPROT  = 3'h0;
 assign M_AXI_AWQOS   = 4'h0;
-assign M_AXI_AWUSER  = 'b0;
+assign M_AXI_AWUSER  = 1'b0;
 assign M_AXI_AWVALID = 0;
 
 // Write Data(W)
 assign M_AXI_WDATA  = 0;
 assign M_AXI_WSTRB  = 0;
 assign M_AXI_WLAST  = 0;
-assign M_AXI_WUSER  = 'b0;
+assign M_AXI_WUSER  = 1'b0;
 assign M_AXI_WVALID = 0;
 
 // Write Response (B)
@@ -131,15 +131,15 @@ assign M_AXI_BREADY = 0;
 
 // Read Address (AR)
 /* ★以下の3か所の???を、正しい設定値にしておく★ */
-assign M_AXI_ARID    = 'b0;
-assign M_AXI_ARLEN   = ???
-assign M_AXI_ARSIZE  = ???
-assign M_AXI_ARBURST = ???
+assign M_AXI_ARID    = 1'b0;
+assign M_AXI_ARLEN   = 8'h1F;
+assign M_AXI_ARSIZE  = 3'b011;
+assign M_AXI_ARBURST = 2'b01;
 assign M_AXI_ARLOCK  = 1'b0;
 assign M_AXI_ARCACHE = 4'b0011;
 assign M_AXI_ARPROT  = 3'h0;
 assign M_AXI_ARQOS   = 4'h0;
-assign M_AXI_ARUSER  = 'b0;
+assign M_AXI_ARUSER  = 1'b0;
 
 /* ACLKで同期化したリセット信号ARSTの作成 */
 reg [1:0]   arst_ff;
