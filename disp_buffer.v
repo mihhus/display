@@ -43,7 +43,9 @@ output  reg         DSP_DE
 wire    [9:0] counter;
 wire    RST = ARST | DRST | FIFORST;
 wire    [23:0] dout;
-wire    [47:0] din = {FIFOIN[55:32] + FIFOIN[23:0]};
+//wire    [47:0] din = {FIFOIN[55:32], FIFOIN[23:0]};
+wire    [47:0] din = {FIFOIN[23:0], FIFOIN[55:32]};
+reg     [1:0] dsp_deff;
 
 //wr_data_counterが書き込まれた数なら1024-counterでFIFO残りサイズがわかるはず
 //1で書き込み可能, 0で書き込み不可能
@@ -55,8 +57,11 @@ wire    empty;
 wire    valid;
 
 //DSP_DE
-always @* begin
-    DSP_DE <= DSP_preDE;
+always @(posedge DCLK) begin
+    dsp_deff <= {dsp_deff[0], DSP_preDE};
+end
+always @(posedge DCLK) begin
+    DSP_DE <= dsp_deff[1];
 end //DSP_DE
 /* FIFO */
 fifo_48in24out_1024depth fifo_48in24out_1024depth(

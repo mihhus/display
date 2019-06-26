@@ -17,11 +17,11 @@ module disp_vramctrl
     input           ACLK,
     input           ARST,
 
-    // Read Address
+    // Read Address, アドレス渡し
     output  [31:0]  ARADDR,
     output          ARVALID,
     input           ARREADY,
-    // Read Data 
+    // Read Data, データ渡しここがRREADYになってるとFIFOにデータが書き込まれる
     input           RLAST,
     input           RVALID,
     output          RREADY,
@@ -51,11 +51,11 @@ parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1
 parameter watch_dogs = 16'h9600; //16'd38400
 
 //ARチャネルの送信側
-//ARADDR 8*32が1トランザクションなので
-assign ARADDR = COUNT*6'h10+DISPADDR;
+//ARADDR 8*32=256が1トランザクションなので
+assign ARADDR = COUNT*9'h100+DISPADDR;
 
 //ARVALID
-assign ARVALID = (!ARST&NXT==S_SETADDR&ARREADY) ? 1 : 0;
+assign ARVALID = (!ARST&CUR==S_SETADDR&ARREADY) ? 1 : 0;
 
 //ステートレジスタ
 always @(posedge ACLK) begin
@@ -82,7 +82,7 @@ always @* begin
                     else begin
                         NXT <= S_SETADDR;
                     end
-        S_READ: if(RLAST&RREADY) begin  //VRAMを読み出し、FIFOにつく
+        S_READ: if(RLAST&RVALID) begin  //VRAMを読み出し、FIFOにつく
                     if(COUNT==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
                         NXT <= S_IDLE;
                     end

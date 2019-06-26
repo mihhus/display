@@ -28,7 +28,7 @@ reg [10:0]  HCNT;           //水平カウンタ
 reg [10:0]  VCNT;            //垂直カウンタ
 
 //VRSTART
- assign VRSTART = (VCNT==VFP+VPW+VBP) ? 1 : 0;
+ assign VRSTART = (VCNT==VFP+VPW+1) ? 1 : 0;
 
 //DSP_HSYNC_X
 always@(posedge DCLK) begin
@@ -68,7 +68,7 @@ always@(posedge DCLK) begin
         DSP_preDE <= 1'b0;
     end
     else begin
-        if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-1)) begin
+        if((VCNT==VFP+VPW+VBP+VDO)|(HCNT==HFP+HPW+HBP+HDO-2)) begin
             DSP_preDE <= 1'b0;
         end
         else if((VCNT>=VFP+VPW+VBP)&(VCNT<=VFP+VPW+VBP+VDO)&(HCNT==HFP+HPW+HBP-2)) begin
