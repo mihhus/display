@@ -17,11 +17,11 @@ module disp_vramctrl
     input           ACLK,
     input           ARST,
 
-    // Read Address
+    // Read Address, アドレス渡し
     output  [31:0]  ARADDR,
     output          ARVALID,
     input           ARREADY,
-    // Read Data 
+    // Read Data, データ渡しここがRREADYになってるとFIFOにデータが書き込まれる
     input           RLAST,
     input           RVALID,
     output          RREADY,
@@ -39,10 +39,10 @@ module disp_vramctrl
 //AXIで各種信号をやり取りする Masterとして
 //FIFOへ書き込み
 
-    reg [3:0] state_reg;
-    reg [3:0] state_generator;
+    reg [3:0] CUR;
+    reg [3:0] NXT;
 
-    reg [15:0] counter;
+    reg [15:0] COUNT;
 
 //ステート名定義
 parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
@@ -51,60 +51,75 @@ parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1
 parameter watch_dogs = 16'h9600; //16'd38400
 
 //ARチャネルの送信側
-//ARADDR
-assign ARADDR = (!ARST&state_reg==S_SETADDR) ? counter*4'h20+DISPADDR : 0;
+//ARADDR 8*32=256が1トランザクションなので
+assign ARADDR = COUNT*9'h100+DISPADDR;
 
 //ARVALID
-assign ARVALID = (!ARST&state_generator==S_SETADDR) ? 1 : 0;
+assign ARVALID = (!ARST&CUR==S_SETADDR&ARREADY) ? 1 : 0;
 
 //ステートレジスタ
 always @(posedge ACLK) begin
     if(ARST) begin
-        state_reg <= S_IDLE;
+        CUR <= S_IDLE;
     end
     else begin
-        state_reg <= state_generator;
+        CUR <= NXT;
     end
-end //state_reg
+end //CUR
 
-//state_generator
+//NXT
 always @* begin
-    case(state_reg)
-        S_IDLE: if(VRSTART) begin
-                    state_generator <= S_SETADDR;
+    case(CUR)
+        S_IDLE: if(VRSTART) begin   //待機
+                    NXT <= S_SETADDR;
                 end
-        S_SETADDR: if(ARREADY) begin
-                    state_generator <= S_READ;
-                   end
-        S_READ: if(RLAST&RREADY) begin
-                    if(counter==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
-                        state_generator <= S_IDLE;
+                else begin
+                    NXT <= S_IDLE;
+                end
+        S_SETADDR: if(ARREADY) begin    //ARチャネルにアドレスを発行
+                        NXT <= S_READ;
+                    end
+                    else begin
+                        NXT <= S_SETADDR;
+                    end
+        S_READ: if(RLAST&RVALID) begin  //VRAMを読み出し、FIFOにつく
+                    if(COUNT==watch_dogs) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
+                        NXT <= S_IDLE;
                     end
                     else if(BUF_WREADY) begin   //バッファに余裕があればS_SETADDRに移動
-                        state_generator <= S_SETADDR;
+                        NXT <= S_SETADDR;
                     end
                     else begin  //一画面分終了しておらず，バッファに余裕がなければS_WAITに移動
-                        state_generator <= S_WAIT;
+                        NXT <= S_WAIT;
                     end
                 end
+                else begin
+                    NXT <=S_READ;
+                end
         S_WAIT: if(BUF_WREADY) begin
-                    state_generator <= S_SETADDR;
+                    NXT <= S_SETADDR;
+                end
+                else begin
+                    NXT <= S_WAIT;
                 end
         default:
-            state_generator <= S_IDLE;
+            NXT <= S_IDLE;
     endcase
-end //state_generator;
+end //NXT;
 
-//counter
-always @* begin
-    if(ACLK) begin
-        counter <= 0;
+//RREADY
+assign RREADY = (CUR==S_READ&!ARST) ? 1 : 0;
+
+//COUNT
+always @(posedge ACLK) begin
+    if(ARST) begin
+        COUNT <= 0;
     end
-    else if(state_reg==S_SETADDR&ARREADY) begin
-        counter <= counter + 1;
+    else if(CUR==S_SETADDR&ARREADY) begin
+        COUNT <= COUNT + 1;
     end
-    else if(counter==watch_dogs&RLAST&RREADY) begin
-        counter <= 0;
+    else if(COUNT==watch_dogs&RLAST&RREADY) begin
+        COUNT <= 0;
     end
-end//counter
+end//COUNT
 endmodule
