@@ -43,12 +43,21 @@ module disp_regctrl
 
 // 出力信号の固定
 assign RDATA    = 32'b0;
-assign DISPADDR = 29'h0;
 assign DSP_IRQ  = 1'b0;
 
-wire    write_reg  = WREN && WRADDR[15:12]==4'h0;
-wire    ctrlreg_wr = (write_reg && WRADDR[11:2]==10'h001 && BYTEEN[0]);
+//レジスタの値
+reg INTENBL;
 
+//表示回路は0なのでWRADDRの上位4bitが0なら1を出力する
+wire    write_reg  = WREN && WRADDR[15:12]==4'h0;
+
+//DISPADDRレジスタ
+//DISPADDRへの書き込み
+assign DISPADDR = (write_reg&WRADDR[11:2]&WRADDR[11:0]==12'h000)? WDATA[27:0]:0;
+
+//ctrl_wr
+//write_regの条件を満たしていてWRADDR[11:2]の最下位のみ1でBYTEEN4bitの最下位ビットが1ならcontrol_regが指定されたことになる
+wire    ctrlreg_wr = (write_reg && WRADDR[11:2]==10'h001 && BYTEEN==2'b00);
 // コントロールレジスタ（DISPCTRL）・・DISPON
 always @( posedge ACLK ) begin
     if ( ARST )
@@ -56,5 +65,16 @@ always @( posedge ACLK ) begin
     else if ( ctrlreg_wr )
         DISPON <= WDATA[0];
 end
+// コントロールレジスタ（DISPCTRL）・・VBLANK
 
+//int_wr
+wire    int_wr = write_reg && WRADDR[11:3]==12'h001 && BYTEEN==2'b00;
+
+always @(posedge ACLK) begin
+    if(ARST)
+        INTENBL <= 0;
+    end
+    else if(int_wr)
+        INTENBL <= WDATA[0];
+end
 endmodule
