@@ -60,10 +60,12 @@ assign DISPADDR = (write_reg&WRADDR[11:2]&WRADDR[11:0]==12'h000)? WDATA[27:0]:0;
 wire    ctrlreg_wr = (write_reg && WRADDR[11:2]==10'h001 && BYTEEN==2'b00);
 // コントロールレジスタ（DISPCTRL）・・DISPON
 always @( posedge ACLK ) begin
-    if ( ARST )
+    if ( ARST ) begin
         DISPON <= 1'b0;
-    else if ( ctrlreg_wr )
+    end
+    else if ( ctrlreg_wr ) begin
         DISPON <= WDATA[0];
+    end
 end
 // コントロールレジスタ（DISPCTRL）・・VBLANK
 
@@ -71,10 +73,11 @@ end
 wire    int_wr = write_reg && WRADDR[11:3]==12'h001 && BYTEEN==2'b00;
 
 always @(posedge ACLK) begin
-    if(ARST)
+    if(ARST) begin
         INTENBL <= 0;
     end
-    else if(int_wr)
+    else if(int_wr) begin
         INTENBL <= WDATA[0];
+    end
 end
 endmodule
