@@ -18,23 +18,23 @@ module disp_regctrl
     input               ARST,
 
     /* VSYNC */
-    input               DSP_VSYNC_X,
+    input               DSP_VSYNC_X, //syncgenよりV方向のSync
 
     /* レジスタバス */
-    input       [15:0]  WRADDR,
-    input       [3:0]   BYTEEN,
-    input               WREN,
-    input       [31:0]  WDATA,
-    input       [15:0]  RDADDR,
-    input               RDEN,
-    output      [31:0]  RDATA,
+    input       [15:0]  WRADDR, //上位4bitで自ブロックに対する書き込み化を判断し、下位12bitでレジスタを選択する
+    input       [3:0]   BYTEEN, //バイト単位での書き込みイネーブル
+    input               WREN,   //書き込みイネーブル
+    input       [31:0]  WDATA,  //書き込みデータ
+    input       [15:0]  RDADDR, //4bitで自ブロックに対する読み出しか否かを判断し、下位12bitでレジスタを選択する
+    input               RDEN,   //読み出しイネーブル
+    output      [31:0]  RDATA,  //読み出しデータ
 
     /* レジスタ出力 */
-    output  reg         DISPON,
-    output      [28:0]  DISPADDR,
+    output  reg         DISPON,     //disp_vramctrl, disp_bufferへ、displayをONにする
+    output      [28:0]  DISPADDR,   //disp_vramctrlへ、表示開始アドレスの下位29bit
 
     /* 割り込み、FIFOフラグ */
-    output              DSP_IRQ,
+    output              DSP_IRQ,    //VBLANKによる割込み信号
     input               BUF_UNDER,
     input               BUF_OVER
     ); 

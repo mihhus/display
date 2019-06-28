@@ -69,7 +69,7 @@ fifo_48in24out_1024depth fifo_48in24out_1024depth(
     .wr_clk       (ACLK),
     .rd_clk       (DCLK),
     .din          (din),
-    .wr_en        (FIFOWR),
+    .wr_en        (FIFOWR&DISPON),
     .rd_en        (DSP_preDE),
     .dout         (dout),
     .full         (full),
@@ -89,6 +89,9 @@ always @(posedge DCLK) begin
         if(DISPON) begin
             DSP_R <= dout[23:16];
         end
+        else begin
+            DSP_R <= 0;
+        end
     end
 end //DSP_R
 
@@ -101,6 +104,9 @@ always @(posedge DCLK) begin
         if(DISPON) begin
             DSP_G <= dout[15:8];
         end
+        else begin
+            DSP_G <= 0;
+        end
     end
 end //DSP_G
 
@@ -112,6 +118,9 @@ always @(posedge DCLK) begin
     else begin
         if(DISPON) begin
             DSP_B <= dout[7:0];
+        end
+        else begin
+            DSP_B <= 0;
         end
     end
 end //DSP_B
