@@ -49,12 +49,15 @@ module disp_vramctrl
 //ステートレジスタの比較うんぬんの兼ね合いでWATCH_DOGSが１増えている必要がある
 //RESOL==1 VGA, RESOL==2 XGA, RESOL==3 SXGA
     wire    [15:0] WATCH_DOGS = (RESOL==2'b01)? 16'h12C1:(RESOL==2'b10)?16'h3001:16'h5001; //16'd4800, 786432, 1310720
+//1トランザクション毎のアドレスの進み方
+    wire    [8:0] STEP = 9'h100;
 //ステート名定義
 parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1000;
 
 //ARチャネルの送信側
 //ARADDR 8*32=256が1トランザクションなので
-assign ARADDR = COUNT*9'h100+DISPADDR;
+//100じゃあかん
+assign ARADDR = COUNT*STEP+DISPADDR;
 
 //ARVALID
 assign ARVALID = (!ARST&CUR==S_SETADDR&ARREADY) ? 1 : 0;
