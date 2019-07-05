@@ -27,14 +27,14 @@ module disp_regctrl
     input       [31:0]  WDATA,  //書き込みデータ
     input       [15:0]  RDADDR, //4bitで自ブロックに対する読み出しか否かを判断し、下位12bitでレジスタを選択する
     input               RDEN,   //読み出しイネーブル
-    output      [31:0]  RDATA,  //読み出しデータ
+    output  reg [31:0]  RDATA,  //読み出しデータ
 
     /* レジスタ出力 */
-    output  reg         DISPON,     //disp_vramctrl, disp_bufferへ、displayをONにする
-    output      [28:0]  DISPADDR,   //disp_vramctrlへ、表示開始アドレスの下位29bit
+    output  reg            DISPON,     //disp_vramctrl, disp_bufferへ、displayをONにする
+    output  reg    [28:0]  DISPADDR,   //disp_vramctrlへ、表示開始アドレスの下位29bit
 
     /* 割り込み、FIFOフラグ */
-    output              DSP_IRQ,    //VBLANKによる割込み信号
+    output  reg         DSP_IRQ,    //VBLANKによる割込み信号
     input               BUF_UNDER,
     input               BUF_OVER
     ); 
@@ -53,7 +53,7 @@ reg [1:0] arst_vsync;
 
 //ARSTでVSYNCを同期化
 always @(posedge ACLK) begin
-    arst_vsync <- {arst_vsync[0], DSP_VSYNC_X};
+    arst_vsync <= {arst_vsync[0], DSP_VSYNC_X};
 end
 
 wire VSYNC = arst_vsync[1];
@@ -99,7 +99,7 @@ always @(posedge ACLK) begin
 end//VBLANK
 
 //int_wr
-wire    int_wr = write_reg && WRADDR[11:2]==12'h002 && BYTEEN==2'b00;
+wire    int_wr = write_reg && WRADDR[11:2]==10'h002 && BYTEEN==2'b00;
 
 //INTCLR
 always @(posedge ACLK) begin
@@ -123,7 +123,7 @@ always @(posedge ACLK) begin
 end //INTENBL
 
 //fifo_wr
-wire    fifo_wr = write_reg && WRADDR[11:2]==12'h003 && BYTEEN==2'b00;
+wire    fifo_wr = write_reg && WRADDR[11:2]==10'h003 && BYTEEN==2'b00;
 
 //FIFOOVER
 always @(posedge ACLK) begin
@@ -155,38 +155,15 @@ always @(posedge ACLK) begin
 end
 
 //DSP_IRQ
-always @(posedge ACLK) begin
-    if(ARST) begin
-        DSP_IRQ <= 0;
-    end
-    else if(VBLANK) begin
-        DSP_IRQ <= 0;
-    end
-    else if(WDATA[1]&&int_wr) begin
-        DSP_IRQ <= 0;
-    end
-end
+assign DSP_IRQ = (ARST) ? 0 : (VBLANK) ? 1 : (WDATA[1]&int_wr) ? 0 : DSP_IRQ;
 
 //以下読み出しに関する記述
 wire    read_reg  = RDEN && RDADDR[15:12]==4'h0;
 
 //RDATA
-always @(posedge ACLK) begin
-    if(ARST) begin
-        RDATA <= 0;
-    end
-    else if(read_reg&RDADDR[11:0]==12'h000) begin
-        RDATA <= {3'h0, DISPADDR};
-    end
-    else if(read_reg&RDADDR[11:2]==12'h002) begin
-        RDATA <= {30'h000, VBLANK, DISPON};
-    end
-    else if(read_reg&RDADDR[11:2]==12'h003) begin
-        RDADDR <= {30'h000, FIFOOVER, FIFOUNDER};
-    end
-    else begin
-        RDATA <=0;
-    end
-end
+assign RDATA = (ARST) ? 0 : (!read_reg) ? 0 :
+               (RDADDR[11:0]==12'h000) ? {3'h0, DISPADDR} : 
+               (RDADDR[11:2]==10'h002) ? {30'h000, VBLANK, DISPON} :
+               (RDADDR[11:2]==10'h003) ? {30'h000, FIFOOVER, FIFOUNDER} : 0;
 
 endmodule
