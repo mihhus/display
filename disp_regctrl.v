@@ -27,14 +27,14 @@ module disp_regctrl
     input       [31:0]  WDATA,  //書き込みデータ
     input       [15:0]  RDADDR, //4bitで自ブロックに対する読み出しか否かを判断し、下位12bitでレジスタを選択する
     input               RDEN,   //読み出しイネーブル
-    output      [31:0]  RDATA,  //読み出しデータ
+    output  reg [31:0]  RDATA,  //読み出しデータ
 
     /* レジスタ出力 */
     output  reg         DISPON,     //disp_vramctrl, disp_bufferへ、displayをONにする
-    output      [28:0]  DISPADDR,   //disp_vramctrlへ、表示開始アドレスの下位29bit
+    output  reg [28:0]  DISPADDR,   //disp_vramctrlへ、表示開始アドレスの下位29bit
 
     /* 割り込み、FIFOフラグ */
-    output              DSP_IRQ,    //VBLANKによる割込み信号
+    output   reg        DSP_IRQ,    //VBLANKによる割込み信号
     input               BUF_UNDER,
     input               BUF_OVER
     ); 
@@ -49,11 +49,14 @@ reg INTCLR;
 reg VBLANK;
 reg FIFOOVER;
 reg FIFOUNDER;
-reg [1:0] arst_vsync;
+
+//VBLANK用
+reg preVSYNC;
 
 //ARSTでVSYNCを同期化
+reg [1:0] arst_vsync;
 always @(posedge ACLK) begin
-    arst_vsync <- {arst_vsync[0], DSP_VSYNC_X};
+    arst_vsync <= {arst_vsync[0], DSP_VSYNC_X};
 end
 
 wire VSYNC = arst_vsync[1];
@@ -64,11 +67,31 @@ wire    write_reg  = WREN && WRADDR[15:12]==4'h0;
 
 //DISPADDRレジスタ
 //DISPADDRへの書き込み
-assign DISPADDR = (write_reg&WRADDR[11:0]==12'h000)? WDATA[27:0]:0;
+//assign DISPADDR = (write_reg&WRADDR[11:0]==12'h000)? WDATA[27:0]:0;
+
+always @(posedge ACLK) begin
+    if(ARST) begin
+        DISPADDR <= 0;
+    end
+    else if(write_reg&WRADDR[11:0]==12'h000) begin
+        if(BYTEEN[0]) begin
+            DISPADDR[7:0] <= WDATA[7:0];
+        end
+        if(BYTEEN[1]) begin
+            DISPADDR[15:8] <= WDATA[15:8];
+        end
+        if(BYTEEN[2]) begin
+            DISPADDR[23:16] <= WDATA[23:16];
+        end
+        if(BYTEEN[3]) begin
+            DISPADDR[28:24] <= WDATA[28:24];
+        end
+    end
+end
 
 //ctrl_wr
 //write_regの条件を満たしていてWRADDR[11:2]の最下位のみ1でBYTEEN4bitの最下位ビットが1ならcontrol_regが指定されたことになる
-wire    ctrlreg_wr = (write_reg && WRADDR[11:2]==10'h001 && BYTEEN==2'b00);
+wire    ctrlreg_wr = write_reg && WRADDR[11:2]==10'h001 && BYTEEN[0];
 // コントロールレジスタ（DISPCTRL）・・DISPON
 always @( posedge ACLK ) begin
     if ( ARST ) begin
@@ -83,33 +106,44 @@ end
 //クロックに差があるのでVSYNCのposedgeを取得したい感ある
 always @(posedge ACLK) begin
     if(ARST) begin
+        preVSYNC <= 0;
+    end
+    else begin
+        preVSYNC <= VSYNC;
+    end
+end
+always @(posedge ACLK) begin
+    if(ARST) begin
         VBLANK <= 0;
     end
-    else if(ctrlreg_wr) begin
-        if(WDATA[1]==1) begin
-            VBLANK <= 0;
-        end
-        else if(VSYNC) begin
-            VBLANK <= 1;
-        end
-        else begin
-            VBLANK <= 0;
-        end
+    else if(ctrlreg_wr&WDATA[1]) begin
+        VBLANK <= 0;
+    end
+    else if(VBLANK) begin
+        VBLANK <= 1;
+    end
+    else if(!VSYNC&preVSYNC) begin
+        VBLANK <= 1;
+    end
+    else begin
+        VBLANK <= 0;
     end
 end//VBLANK
 
 //int_wr
-wire    int_wr = write_reg && WRADDR[11:2]==12'h002 && BYTEEN==2'b00;
+wire    int_wr = write_reg && WRADDR[11:2]==12'h002 && BYTEEN[0];
 
 //INTCLR
+//あんまり意味ない
 always @(posedge ACLK) begin
     if(ARST) begin
         INTCLR <= 0;
     end
     else if(int_wr) begin
-        if(WDATA[1]) begin
-            INTCLR <= 0;    //1ならゼロクリア
-        end
+        INTCLR <= WDATA[1];
+    end
+    else begin
+        INTCLR <= 0;
     end
 end
 //INTENBL
@@ -123,7 +157,7 @@ always @(posedge ACLK) begin
 end //INTENBL
 
 //fifo_wr
-wire    fifo_wr = write_reg && WRADDR[11:2]==12'h003 && BYTEEN==2'b00;
+wire    fifo_wr = write_reg && WRADDR[11:2]==12'h003 && BYTEEN[0];
 
 //FIFOOVER
 always @(posedge ACLK) begin
@@ -138,7 +172,8 @@ always @(posedge ACLK) begin
             FIFOOVER <= 1;
         end
     end
-end
+end //FIFOOVER
+
 //FIFOUNDER
 always @(posedge ACLK) begin
     if(ARST) begin
@@ -159,10 +194,10 @@ always @(posedge ACLK) begin
     if(ARST) begin
         DSP_IRQ <= 0;
     end
-    else if(VBLANK) begin
-        DSP_IRQ <= 0;
+    else if(VBLANK&INTENBL) begin
+        DSP_IRQ <= 1;
     end
-    else if(WDATA[1]&&int_wr) begin
+    else if(WDATA[1]&int_wr) begin
         DSP_IRQ <= 0;
     end
 end
@@ -178,11 +213,14 @@ always @(posedge ACLK) begin
     else if(read_reg&RDADDR[11:0]==12'h000) begin
         RDATA <= {3'h0, DISPADDR};
     end
-    else if(read_reg&RDADDR[11:2]==12'h002) begin
+    else if(read_reg&RDADDR[11:2]==10'h001) begin
         RDATA <= {30'h000, VBLANK, DISPON};
     end
-    else if(read_reg&RDADDR[11:2]==12'h003) begin
-        RDADDR <= {30'h000, FIFOOVER, FIFOUNDER};
+    else if(read_reg&RDADDR[11:2]==10'h002) begin
+        RDATA <= {30'h000, INTCLR, INTENBL};
+    end
+    else if(read_reg&RDADDR[11:2]==10'h003) begin
+        RDATA <= {30'h000, FIFOOVER, FIFOUNDER};
     end
     else begin
         RDATA <=0;
