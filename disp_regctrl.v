@@ -119,14 +119,8 @@ always @(posedge ACLK) begin
     else if(ctrlreg_wr&WDATA[1]) begin
         VBLANK <= 0;
     end
-    else if(VBLANK) begin
-        VBLANK <= 1;
-    end
     else if(!VSYNC&preVSYNC) begin
         VBLANK <= 1;
-    end
-    else begin
-        VBLANK <= 0;
     end
 end//VBLANK
 
@@ -134,7 +128,6 @@ end//VBLANK
 wire    int_wr = write_reg && WRADDR[11:2]==12'h002 && BYTEEN[0];
 
 //INTCLR
-//‚ ‚ñ‚Ü‚èˆÓ–¡‚È‚¢
 always @(posedge ACLK) begin
     if(ARST) begin
         INTCLR <= 0;
@@ -155,6 +148,19 @@ always @(posedge ACLK) begin
         INTENBL <= WDATA[0];
     end
 end //INTENBL
+
+//DSP_IRQ
+always @(posedge ACLK) begin
+    if(ARST) begin
+        DSP_IRQ <= 0;
+    end
+    else if(!VSYNC&preVSYNC&INTENBL) begin
+        DSP_IRQ <= 1;
+    end
+    else if(WDATA[1]&int_wr) begin
+        DSP_IRQ <= 0;
+    end
+end
 
 //fifo_wr
 wire    fifo_wr = write_reg && WRADDR[11:2]==12'h003 && BYTEEN[0];
@@ -189,18 +195,6 @@ always @(posedge ACLK) begin
     end
 end
 
-//DSP_IRQ
-always @(posedge ACLK) begin
-    if(ARST) begin
-        DSP_IRQ <= 0;
-    end
-    else if(VBLANK&INTENBL) begin
-        DSP_IRQ <= 1;
-    end
-    else if(WDATA[1]&int_wr) begin
-        DSP_IRQ <= 0;
-    end
-end
 
 //ˆÈ‰º“Ç‚Ýo‚µ‚ÉŠÖ‚·‚é‹Lq
 wire    read_reg  = RDEN && RDADDR[15:12]==4'h0;
@@ -217,7 +211,7 @@ always @(posedge ACLK) begin
         RDATA <= {30'h000, VBLANK, DISPON};
     end
     else if(read_reg&RDADDR[11:2]==10'h002) begin
-        RDATA <= {30'h000, INTCLR, INTENBL};
+        RDATA <= {31'h000, INTENBL};
     end
     else if(read_reg&RDADDR[11:2]==10'h003) begin
         RDATA <= {30'h000, FIFOOVER, FIFOUNDER};
