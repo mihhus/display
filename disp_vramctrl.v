@@ -77,14 +77,8 @@ always @* begin
         S_IDLE: if(VRSTART) begin   //待機
                     NXT <= S_SETADDR;
                 end
-                else begin
-                    NXT <= S_IDLE;
-                end
         S_SETADDR: if(ARREADY) begin    //ARチャネルにアドレスを発行
                         NXT <= S_READ;
-                    end
-                    else begin
-                        NXT <= S_SETADDR;
                     end
         S_READ: if(RLAST&RVALID) begin  //VRAMを読み出し、FIFOにつく
                     if(COUNT==WATCH_DOGS-1) begin//一画面分終了したらS_IDLEに戻る, カウンタが必要
@@ -102,9 +96,6 @@ always @* begin
                 end
         S_WAIT: if(BUF_WREADY) begin
                     NXT <= S_SETADDR;
-                end
-                else begin
-                    NXT <= S_WAIT;
                 end
         default:
             NXT <= S_IDLE;
