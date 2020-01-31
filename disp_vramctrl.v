@@ -59,8 +59,20 @@ parameter S_IDLE = 4'b0001, S_SETADDR = 4'b0010, S_READ = 4'b0100, S_WAIT = 4'b1
 assign ARADDR = COUNT*STEP+DISPADDR;
 
 //ARVALID
-assign ARVALID = (CUR==S_SETADDR) ? 1 : 0;
+reg ARVALID_reg;
+assign ARVALID = ARVALID_reg;
 
+always @(posedge ACLK) begin
+    if(ARST) begin
+        ARVALID_reg <= 0;
+    end
+    else if(NXT==S_SETADDR&CUR!=S_SETADDR)begin
+        ARVALID_reg <= 1;
+    end
+    else if(ARREADY) begin
+        ARVALID_reg <= 0;
+    end
+end
 //ステートレジスタ
 always @(posedge ACLK) begin
     if(ARST) begin
@@ -103,7 +115,7 @@ always @* begin
 end //NXT;
 
 //RREADY
-assign RREADY = (CUR==S_READ&!ARST) ? 1 : 0;
+assign RREADY = (CUR==S_READ) ? 1 : 0;
 
 //COUNT
 always @(posedge ACLK) begin
@@ -113,7 +125,7 @@ always @(posedge ACLK) begin
     else if(CUR==S_SETADDR&ARREADY) begin
         COUNT <= COUNT + 1;
     end
-    else if(COUNT==WATCH_DOGS&CUR==S_IDLE) begin
+    else if(CUR==S_IDLE) begin
         COUNT <= 0;
     end
 end//COUNT
